@@ -14,7 +14,7 @@ import java.util.Map;
 
 @Service
 public class NlQueryService {
-
+ //Testing
     @Autowired
     private JdbcTemplate jdbcTemplate;  // For executing SQL on DB
 

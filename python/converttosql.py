@@ -10,30 +10,42 @@ LLAMA_URL = os.getenv("LLAMA_URL")
 API_KEY = os.getenv("LLAMA_API_KEY") 
 LLAMA_MODEL = os.getenv("LLAMA_MODEL")  
 
-SYSTEM_PROMPT = """You are an expert SQL assistant. 
-Your job is to convert natural language questions into correct, executable SQL queries.
-- Only output the SQL query.
-- Never explain anything.
-- Never add markdown (no ```sql).
-- Never say "Sure" or "Here is".
-- Do not include quotes or extra text.
-- Use proper table and column names based on common sense.
-- Assume standard SQL (PostgreSQL/MySQL compatible).
-- Always use SELECT (never CREATE, INSERT, etc. unless explicitly asked).
+SYSTEM_PROMPT = """You are an expert Oracle SQL assistant. 
+Your job is to convert natural language questions into correct, executable SQL queries that are fully compatible with Oracle.
+Follow these strict rules:
+
+- Only output the SQL query. Do not explain, comment, or add markdown.  
+- Never say "Sure", "Here is", or any extra text.  
+- Always use proper table and column names based on common sense.  
+- Always use SELECT statements unless explicitly asked to CREATE, INSERT, UPDATE, or DELETE.  
+- Use Oracle syntax for all functions:
+    - EXTRACT(YEAR FROM date_column) instead of YEAR(date_column)  
+    - SYSDATE for current date/time  
+    - FETCH FIRST n ROWS ONLY instead of LIMIT  
+    - TO_CHAR, TO_DATE, NVL, etc., when needed  
 
 Examples:
 
-User: How many users are there?
+User: How many users are there?  
 SQL: SELECT COUNT(*) FROM users;
 
-User: Show me all customers from Germany ordered by registration date.
+User: Show me all customers from Germany ordered by registration date.  
 SQL: SELECT * FROM customers WHERE country = 'Germany' ORDER BY registration_date;
 
-User: What is the average order value in 2024?
-SQL: SELECT AVG(amount) FROM orders WHERE YEAR(order_date) = 2024;
+User: What is the average order value in 2024?  
+SQL: SELECT AVG(amount) FROM orders WHERE EXTRACT(YEAR FROM order_date) = 2024;
 
-Now generate the SQL query for the user question.
-"""
+User: List the first 10 products by price.  
+SQL: SELECT * FROM products ORDER BY price DESC FETCH FIRST 10 ROWS ONLY;
+
+User: How many employees joined after January 1, 2023?  
+SQL: SELECT COUNT(*) FROM employees WHERE hire_date > TO_DATE('2023-01-01', 'YYYY-MM-DD');
+
+User: Show all orders with total amount greater than 1000, including customer name.  
+SQL: SELECT o.order_id, o.amount, c.customer_name FROM orders o JOIN customers c ON o.customer_id = c.customer_id WHERE o.amount > 1000;
+
+Now generate the SQL query for the user question. Only output the SQL query."""
+
 
 def query_llm(prompt: str) -> str:
     

@@ -1,6 +1,23 @@
 import os
 import requests
 from flask import Flask, request, jsonify
+import pandas as pd
+
+schema_df = pd.read_csv("invoicedata.csv") 
+
+def format_schema():
+    text = ""
+    for table in schema_df["TABLE_NAME"].unique():
+        text += f"\nTable: {table}\nColumns:\n"
+        subset = schema_df[schema_df["TABLE_NAME"] == table]
+        for _, row in subset.iterrows():
+            text += f"- {row['COLUMN_NAME']} ({row['DATA_TYPE']})\n"
+    return text
+
+
+DB_SCHEMA_TEXT = format_schema()
+
+
 
 app = Flask(__name__)
 
@@ -10,39 +27,22 @@ LLAMA_URL = os.getenv("LLAMA_URL")
 API_KEY = os.getenv("LLAMA_API_KEY") 
 LLAMA_MODEL = os.getenv("LLAMA_MODEL")  
 
-SYSTEM_PROMPT = """You are an expert Oracle SQL assistant. 
+SYSTEM_PROMPT = f"""You are an expert Oracle SQL assistant. 
 Your job is to convert natural language questions into correct, executable SQL queries that are fully compatible with Oracle.
+
+Database Schema:
+{DB_SCHEMA_TEXT}
 Follow these strict rules:
 
 - Only output the SQL query. Do not explain, comment, or add markdown.  
 - Never say "Sure", "Here is", or any extra text.  
-- Always use proper table and column names based on common sense.  
+- Always use only column names and table names from the schema. 
 - Always use SELECT statements unless explicitly asked to CREATE, INSERT, UPDATE, or DELETE.  
 - Use Oracle syntax for all functions:
     - EXTRACT(YEAR FROM date_column) instead of YEAR(date_column)  
     - SYSDATE for current date/time  
     - FETCH FIRST n ROWS ONLY instead of LIMIT  
     - TO_CHAR, TO_DATE, NVL, etc., when needed  
-
-Examples:
-
-User: How many users are there?  
-SQL: SELECT COUNT(*) FROM users;
-
-User: Show me all customers from Germany ordered by registration date.  
-SQL: SELECT * FROM customers WHERE country = 'Germany' ORDER BY registration_date;
-
-User: What is the average order value in 2024?  
-SQL: SELECT AVG(amount) FROM orders WHERE EXTRACT(YEAR FROM order_date) = 2024;
-
-User: List the first 10 products by price.  
-SQL: SELECT * FROM products ORDER BY price DESC FETCH FIRST 10 ROWS ONLY;
-
-User: How many employees joined after January 1, 2023?  
-SQL: SELECT COUNT(*) FROM employees WHERE hire_date > TO_DATE('2023-01-01', 'YYYY-MM-DD');
-
-User: Show all orders with total amount greater than 1000, including customer name.  
-SQL: SELECT o.order_id, o.amount, c.customer_name FROM orders o JOIN customers c ON o.customer_id = c.customer_id WHERE o.amount > 1000;
 
 Now generate the SQL query for the user question. Only output the SQL query."""
 
